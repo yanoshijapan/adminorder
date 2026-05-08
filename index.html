@@ -167,8 +167,8 @@
                                 <!-- Upload Invoice Zone -->
                                 <div class="upload-zone" :class="{'has-file': item._invoiceFile}"
                                      @dragover.prevent @drop.prevent="handleDrop($event, item, 'invoice')"
-                                     @click="$refs['inv_'+item.row].click()">
-                                    <input type="file" :id="'inv_'+item.row" :x-ref="'inv_'+item.row"
+                                     @click="document.getElementById('inv_' + item.row).click()">
+                                    <input type="file" :id="'inv_' + item.row"
                                            accept=".pdf,image/*"
                                            @change="handleFileSelect($event, item, 'invoice')">
                                     <template x-if="!item._invoiceFile">
@@ -210,13 +210,6 @@
                                 </button>
                             </div>
 
-                            <!-- Follow Up WhatsApp -->
-                            <button @click="followUp(item)"
-                                    :disabled="!item.invoice"
-                                    :class="item.invoice ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
-                                    class="w-full py-2 rounded font-bold text-xs transition">
-                                💬 Follow Up via WhatsApp
-                            </button>
                         </div>
 
                         <!-- Kolom 3: Info Pengiriman + Ongkir -->
@@ -392,17 +385,6 @@
                 } finally {
                     this.allData[idx]._uploadingInvoice = false;
                 }
-            },
-
-            // ─── Follow Up WhatsApp ───────────────────────────────
-            followUp(item) {
-                if (!item.invoice) { showToast('Invoice belum tersedia!', 'error'); return; }
-                let num = item.whatsapp.trim().replace(/\D/g, '');
-                if (num.startsWith('0'))  num = '62' + num.substring(1);
-                if (!num.startsWith('62')) num = '62' + num;
-                const tglKirim = this.formatDate(item.tglKirim);
-                const msg = `Halo kak ${item.customer}, pesanan tgl ${tglKirim} sudah ready. Mohon pelunasannya ya: ${item.invoice}`;
-                window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
             },
 
             // ─── Update Status ────────────────────────────────────
