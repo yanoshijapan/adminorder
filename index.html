@@ -14,20 +14,71 @@
         .bg-red-yanoshi { background-color: #cc0000; }
         .border-gold { border-color: #D4AF37; }
         [x-cloak] { display: none !important; }
+
+        /* ─── Upload Box Styling ─── */
+        .upload-zone {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            background: #fafafa;
+            transition: border-color 0.2s, background 0.2s;
+            cursor: pointer;
+        }
+        .upload-zone:hover {
+            border-color: #cc0000;
+            background: #fff5f5;
+        }
+        .upload-zone.has-file {
+            border-color: #16a34a;
+            background: #f0fdf4;
+        }
+        .upload-zone input[type="file"] { display: none; }
+
+        /* ─── Toast ─── */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast {
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease-out;
+            min-width: 240px;
+        }
+        .toast.success { background: #16a34a; }
+        .toast.error   { background: #dc2626; }
+        .toast.info    { background: #2563eb; }
+        @keyframes slideIn {
+            from { transform: translateX(120%); opacity: 0; }
+            to   { transform: translateX(0);    opacity: 1; }
+        }
     </style>
 </head>
 <body class="overflow-x-hidden" x-data="dashboardApp()" x-init="fetchData()">
 
+    <!-- ─── Toast Container ─── -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- ─── Header ─── -->
     <header class="sticky-header bg-white shadow-md border-b-4 border-red-600">
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-center space-x-2">
-										<img src="https://yanoshijapan.github.io/asetonline/logohitam.png" alt="Yanoshi" class="h-10 w-auto object-contain cursor-pointer">
+                    <img src="https://yanoshijapan.github.io/asetonline/logohitam.png" alt="Yanoshi" class="h-10 w-auto object-contain cursor-pointer">
                     <h1 class="gold-accent text-sm">ADMIN <span class="gold-accent text-sm">DASHBOARD</span></h1>
                 </div>
-                
                 <div class="flex flex-1 max-w-2xl gap-2">
-                    <input type="text" x-model="searchQuery" placeholder="Cari nama customer..." 
+                    <input type="text" x-model="searchQuery" placeholder="Cari nama customer..."
                            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition text-sm">
                     <select x-model="statusFilter" class="px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-500">
                         <option value="">Semua Status</option>
@@ -40,15 +91,20 @@
         </div>
     </header>
 
+    <!-- ─── Main ─── -->
     <main class="max-w-7xl mx-auto px-4 py-8">
+
+        <!-- Loading -->
         <div x-show="loading" class="flex justify-center items-center py-20">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
         </div>
 
+        <!-- Cards -->
         <div class="grid grid-cols-1 gap-6" x-show="!loading">
             <template x-for="item in filteredData" :key="item.row">
                 <div class="bg-white rounded-xl shadow-sm border-l-8 border-red-600 hover:shadow-md transition p-5 relative break-words">
-                    
+
+                    <!-- ─── Card Header ─── -->
                     <div class="flex justify-between items-start mb-4 border-b pb-3">
                         <div>
                             <span class="text-[10px] uppercase font-bold text-gray-400" x-text="'ID: ' + item.orderId"></span>
@@ -56,12 +112,11 @@
                             <p class="text-xs text-gray-500" x-text="formatDate(item.tglOrder)"></p>
                         </div>
                         <div class="text-right flex flex-col items-end gap-2">
-                            <!-- TOMBOL HAPUS -->
-                            <button @click="deleteData(item.row, item.customer)" class="text-[10px] bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded font-bold transition">
+                            <button @click="deleteData(item.row, item.customer)"
+                                    class="text-[10px] bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded font-bold transition">
                                 🗑️ HAPUS
                             </button>
-                            <!-- DROPDOWN STATUS -->
-                            <select @change="updateStatus(item.row, $event.target.value)" 
+                            <select @change="updateStatus(item.row, $event.target.value)"
                                     :class="getStatusColor(item.status)"
                                     class="text-xs font-bold px-3 py-1 rounded-full border-none cursor-pointer focus:ring-2 focus:ring-yellow-400 mt-1">
                                 <template x-for="st in statusOptions">
@@ -71,7 +126,10 @@
                         </div>
                     </div>
 
+                    <!-- ─── Card Body (3 Kolom) ─── -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+
+                        <!-- Kolom 1: Info Customer + List Pesanan -->
                         <div class="space-y-2">
                             <div class="flex items-center text-green-600 font-semibold">
                                 <span class="mr-2">📞</span> <span x-text="item.whatsapp"></span>
@@ -85,34 +143,83 @@
                             </div>
                         </div>
 
+                        <!-- Kolom 2: Invoice, Bukti Bayar, Resi + Upload -->
                         <div class="space-y-3">
                             <button @click="copyFormat(item)" class="w-full py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded font-bold text-xs transition">
                                 📋 COPY FORMAT ORDER
                             </button>
-                            
-                            <div class="flex flex-col space-y-2">
-                                <div class="flex justify-between items-center border-b pb-1">
-                                    <span class="text-xs font-bold text-gray-500">INVOICE</span>
-                                    <template x-if="item.invoice">
-                                        <a :href="item.invoice" target="_blank" class="text-blue-600 underline text-xs">Buka Link</a>
-                                    </template>
-                                    <button @click="openModal(item.row, 15, 'Input Link Invoice')" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded font-bold">INPUT</button>
+
+                            <!-- INVOICE -->
+                            <div class="border rounded-lg p-3 space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-bold text-gray-500">📄 INVOICE</span>
+                                    <div class="flex items-center gap-2">
+                                        <template x-if="item.invoice">
+                                            <a :href="item.invoice" target="_blank" class="text-blue-600 underline text-xs">Buka Link ↗</a>
+                                        </template>
+                                        <button @click="openModal(item.row, 15, 'Input Link Invoice')"
+                                                class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded font-bold">
+                                            LINK
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="flex justify-between items-center border-b pb-1">
-                                    <span class="text-xs font-bold text-gray-500">BUKTI BAYAR</span>
+
+                                <!-- Upload Invoice Zone -->
+                                <div class="upload-zone" :class="{'has-file': item._invoiceFile}"
+                                     @dragover.prevent @drop.prevent="handleDrop($event, item, 'invoice')"
+                                     @click="$refs['inv_'+item.row].click()">
+                                    <input type="file" :id="'inv_'+item.row" :x-ref="'inv_'+item.row"
+                                           accept=".pdf,image/*"
+                                           @change="handleFileSelect($event, item, 'invoice')">
+                                    <template x-if="!item._invoiceFile">
+                                        <p class="text-[11px] text-gray-400">🔼 Klik / Drop File Invoice<br><span class="text-[10px]">(PDF atau Gambar)</span></p>
+                                    </template>
+                                    <template x-if="item._invoiceFile">
+                                        <div class="text-[11px] text-green-700 font-semibold truncate px-2" x-text="'✅ ' + item._invoiceFile.name"></div>
+                                    </template>
+                                </div>
+                                <button @click="uploadFile(item, 'invoice')"
+                                        :disabled="!item._invoiceFile || item._uploadingInvoice"
+                                        :class="item._invoiceFile ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+                                        class="w-full py-1.5 rounded text-[11px] font-bold transition">
+                                    <span x-text="item._uploadingInvoice ? '⏳ Mengupload...' : '📤 Upload Invoice ke Drive'"></span>
+                                </button>
+                            </div>
+
+                            <!-- BUKTI BAYAR -->
+                            <div class="flex justify-between items-center border-b pb-1">
+                                <span class="text-xs font-bold text-gray-500">💳 BUKTI BAYAR</span>
+                                <div class="flex items-center gap-2">
                                     <template x-if="item.buktiBayar">
-                                        <a :href="item.buktiBayar" target="_blank" class="text-blue-600 underline text-xs">Buka Link</a>
+                                        <a :href="item.buktiBayar" target="_blank" class="text-blue-600 underline text-xs">Buka Link ↗</a>
                                     </template>
-                                    <button @click="openModal(item.row, 16, 'Input Link Bukti Bayar')" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded font-bold">INPUT</button>
-                                </div>
-                                <div class="flex justify-between items-center border-b pb-1 gap-2">
-                                    <span class="text-xs font-bold text-gray-500 whitespace-nowrap">RESI</span>
-                                    <span x-text="item.resi || '-'" class="text-xs font-mono break-all text-right flex-1"></span>
-                                    <button @click="openModal(item.row, 17, 'Input No Resi')" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded font-bold whitespace-nowrap">INPUT</button>
+                                    <button @click="openModal(item.row, 16, 'Input Link Bukti Bayar')"
+                                            class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded font-bold">
+                                        INPUT
+                                    </button>
                                 </div>
                             </div>
+
+                            <!-- RESI -->
+                            <div class="flex justify-between items-center border-b pb-1 gap-2">
+                                <span class="text-xs font-bold text-gray-500 whitespace-nowrap">📦 RESI</span>
+                                <span x-text="item.resi || '-'" class="text-xs font-mono break-all text-right flex-1"></span>
+                                <button @click="openModal(item.row, 17, 'Input No Resi')"
+                                        class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded font-bold whitespace-nowrap">
+                                    INPUT
+                                </button>
+                            </div>
+
+                            <!-- Follow Up WhatsApp -->
+                            <button @click="followUp(item)"
+                                    :disabled="!item.invoice"
+                                    :class="item.invoice ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+                                    class="w-full py-2 rounded font-bold text-xs transition">
+                                💬 Follow Up via WhatsApp
+                            </button>
                         </div>
 
+                        <!-- Kolom 3: Info Pengiriman + Ongkir -->
                         <div class="text-xs bg-red-50 p-3 rounded-lg border border-red-100 flex flex-col justify-between">
                             <div>
                                 <p class="font-bold text-red-700 mb-1">INFO PENGIRIMAN</p>
@@ -120,23 +227,17 @@
                                 <p class="mt-1 italic text-gray-600" x-text="item.alamat"></p>
                                 <p class="mt-2 font-bold text-gray-700">Tanggal Kirim: <span x-text="formatDate(item.tglKirim)"></span></p>
                             </div>
-                            
-                            <!-- FITUR ONGKIR -->
                             <div class="mt-3 pt-2 border-t border-red-200 flex justify-between items-center">
                                 <span class="font-bold text-red-700">Ongkos Kirim:</span>
-                                
-                                <!-- Jika data ongkir sudah ada: Tampilkan angka & Tombol Edit -->
                                 <template x-if="item.ongkir">
                                     <div class="flex items-center space-x-2">
                                         <span x-text="formatRupiah(item.ongkir)" class="font-bold text-gray-800 text-sm"></span>
-                                        <button @click="openModal(item.row, 7, 'Edit Ongkos Kirim', item.ongkir)" 
+                                        <button @click="openModal(item.row, 7, 'Edit Ongkos Kirim', item.ongkir)"
                                                 class="text-[10px] text-blue-600 underline hover:text-blue-800">Edit</button>
                                     </div>
                                 </template>
-                                
-                                <!-- Jika data ongkir kosong: Tombol INPUT -->
                                 <template x-if="!item.ongkir">
-                                    <button @click="openModal(item.row, 7, 'Input Ongkos Kirim (Angka saja)')" 
+                                    <button @click="openModal(item.row, 7, 'Input Ongkos Kirim (Angka saja)')"
                                             class="text-[10px] bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded shadow-sm font-bold transition">
                                         INPUT ONGKIR
                                     </button>
@@ -149,6 +250,7 @@
         </div>
     </main>
 
+    <!-- ─── Modal Input Link ─── -->
     <div x-show="modalOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50 px-4">
         <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
             <h3 class="text-lg font-bold mb-4 text-gray-800" x-text="modalTitle"></h3>
@@ -161,94 +263,187 @@
     </div>
 
     <script>
-        function dashboardApp() {
-            return {
-                apiUrl: 'https://script.google.com/macros/s/AKfycbz3V7oaXEBuQAATvcrZsDtGFIXAKTl_h3drbgjksBkJEbFZhjJP2WUSTrPv9mxHm35M/exec', // Ganti dengan URL Deploy AppScript
-                loading: true,
-                allData: [],
-                searchQuery: '',
-                statusFilter: '',
-                statusOptions: ['menunggu', 'DRAFT', 'Verifying', 'Sudah Bayar', 'Sudah Kirim', 'SENT', 'READY'],
-                modalOpen: false,
-                modalTitle: '',
-                modalValue: '',
-                activeRow: null,
-                activeCol: null,
+    // ═══════════════════════════════════════════════════════════
+    //  KONFIGURASI — Sesuaikan dua URL ini
+    // ═══════════════════════════════════════════════════════════
+    const API_READ_UPDATE = 'https://script.google.com/macros/s/AKfycbz3V7oaXEBuQAATvcrZsDtGFIXAKTl_h3drbgjksBkJEbFZhjJP2WUSTrPv9mxHm35M/exec';
+    // URL Deploy dari backinvcs.gs (handle uploadInvoice & uploadResi via POST)
+    const API_UPLOAD      = 'https://script.google.com/macros/s/AKfycbx7w2FXv0ayhq61Le63K7zJsb-znvXq6cjLcLO6shrECvOwN-lF3vBO3-pn1dRCX6dH/exec';
+    // ═══════════════════════════════════════════════════════════
 
-                async fetchData() {
-                    this.loading = true;
-                    try {
-                        const response = await fetch(`${this.apiUrl}?action=read`);
-                        let data = await response.json();
-                        
-                        // FUNGSI BARU: Mengurutkan data berdasarkan tanggal order (tglOrder) dari terbaru ke terlama
-                        data.sort((a, b) => {
-                            // Mengubah format tanggal dari spreadsheet menjadi format waktu yang bisa dihitung
-                            const dateA = new Date(a.tglOrder).getTime();
-                            const dateB = new Date(b.tglOrder).getTime();
-                            
-                            // Jika tanggal kosong/tidak valid, taruh di bawah
-                            if (isNaN(dateA)) return 1;
-                            if (isNaN(dateB)) return -1;
-                            
-                            // Mengurutkan dari yang terbesar (terbaru) ke terkecil (terlama)
-                            return dateB - dateA; 
-                        });
+    function dashboardApp() {
+        return {
+            apiUrl:       API_READ_UPDATE,
+            uploadUrl:    API_UPLOAD,
+            loading:      true,
+            allData:      [],
+            searchQuery:  '',
+            statusFilter: '',
+            statusOptions: ['menunggu', 'DRAFT', 'Verifying', 'Sudah Bayar', 'Sudah Kirim', 'SENT', 'READY'],
+            modalOpen:    false,
+            modalTitle:   '',
+            modalValue:   '',
+            activeRow:    null,
+            activeCol:    null,
 
-                        this.allData = data.map(item => ({...item, showItems: false}));
-                    } catch (e) { 
-                        console.error("Error fetch:", e); 
-                    }
-                    this.loading = false;
-                },
+            // ─── Fetch Data ───────────────────────────────────────
+            async fetchData() {
+                this.loading = true;
+                try {
+                    const response = await fetch(`${this.apiUrl}?action=read`);
+                    let data = await response.json();
 
-                get filteredData() {
-                    return this.allData.filter(i => {
-                        const matchSearch = i.customer.toLowerCase().includes(this.searchQuery.toLowerCase());
-                        const matchStatus = this.statusFilter === '' || i.status === this.statusFilter;
-                        return matchSearch && matchStatus;
+                    data.sort((a, b) => {
+                        const dateA = new Date(a.tglOrder).getTime();
+                        const dateB = new Date(b.tglOrder).getTime();
+                        if (isNaN(dateA)) return 1;
+                        if (isNaN(dateB)) return -1;
+                        return dateB - dateA;
                     });
-                },
 
-                async updateStatus(row, val) {
-                    await fetch(`${this.apiUrl}?action=update&row=${row}&col=8&val=${encodeURIComponent(val)}`);
-                    this.fetchData();
-                },
+                    // Tambahkan properti reaktif untuk upload
+                    this.allData = data.map(item => ({
+                        ...item,
+                        showItems:         false,
+                        _invoiceFile:      null,
+                        _uploadingInvoice: false,
+                    }));
+                } catch (e) {
+                    console.error('Error fetch:', e);
+                    showToast('Gagal memuat data!', 'error');
+                }
+                this.loading = false;
+            },
 
-                openModal(row, col, title, currentValue = '') {
-                    this.activeRow = row;
-                    this.activeCol = col;
-                    this.modalTitle = title;
-                    this.modalValue = currentValue; // Nilai saat ini otomatis masuk ke input modal
-                    this.modalOpen = true;
-                },
+            // ─── Filter ──────────────────────────────────────────
+            get filteredData() {
+                return this.allData.filter(i => {
+                    const matchSearch = i.customer.toLowerCase().includes(this.searchQuery.toLowerCase());
+                    const matchStatus = this.statusFilter === '' || i.status === this.statusFilter;
+                    return matchSearch && matchStatus;
+                });
+            },
 
-                async submitModal() {
-                    this.modalOpen = false;
-                    this.loading = true;
-                    await fetch(`${this.apiUrl}?action=update&row=${this.activeRow}&col=${this.activeCol}&val=${encodeURIComponent(this.modalValue)}`);
-                    this.fetchData();
-                },
-								
-								async deleteData(row, customerName) {
-                    // Munculkan Popup Konfirmasi Bawaan Browser
-                    const confirmDelete = confirm(`PERINGATAN!\nApakah Anda yakin ingin menghapus seluruh data milik: ${customerName}?\n\nData yang dihapus dari Dashboard juga akan hilang permanen dari Spreadsheet.`);
-                    
-                    if (confirmDelete) {
-                        this.loading = true;
-                        try {
-                            await fetch(`${this.apiUrl}?action=delete&row=${row}`);
-                            await this.fetchData(); // Refresh data setelah berhasil dihapus
-                            alert(`Data ${customerName} berhasil dihapus.`);
-                        } catch (e) {
-                            console.error("Gagal menghapus:", e);
-                            alert("Terjadi kesalahan saat menghapus data.");
-                        }
+            // ─── Handle File Select (Invoice only) ───────────────
+            handleFileSelect(event, item, type) {
+                const file = event.target.files[0];
+                if (!file) return;
+                this.assignFile(item, file);
+            },
+
+            // ─── Handle Drag & Drop (Invoice only) ───────────────
+            handleDrop(event, item, type) {
+                const file = event.dataTransfer.files[0];
+                if (!file) return;
+                if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+                    showToast('Format tidak didukung. Gunakan PDF atau Gambar.', 'error');
+                    return;
+                }
+                this.assignFile(item, file);
+            },
+
+            // ─── Simpan file invoice ke state item ────────────────
+            assignFile(item, file) {
+                const idx = this.allData.findIndex(i => i.row === item.row);
+                if (idx === -1) return;
+                this.allData[idx]._invoiceFile = file;
+            },
+
+            // ─── Upload Invoice ke Google Drive ───────────────────
+            // Alur:
+            // 1. Baca file sebagai Base64
+            // 2. POST ke API_UPLOAD (backinvcs.gs) dengan action uploadInvoice
+            // 3. AppScript simpan file ke Drive → catat URL di Spreadsheet kolom O
+            // 4. Jika sukses, refresh data & tampilkan toast
+            async uploadFile(item, type) {
+                const idx  = this.allData.findIndex(i => i.row === item.row);
+                const file = item._invoiceFile;
+
+                if (!file) { showToast('Pilih file terlebih dahulu!', 'error'); return; }
+
+                this.allData[idx]._uploadingInvoice = true;
+
+                try {
+                    const base64  = await fileToBase64(file);
+                    const payload = {
+                        action:   'uploadInvoice',
+                        row:      item.row,
+                        fileName: file.name,
+                        fileData: base64,
+                        mimeType: file.type
+                    };
+
+                    const response = await fetch(this.uploadUrl, {
+                        method: 'POST',
+                        body:   JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showToast('Invoice berhasil diupload ke Drive! ✅', 'success');
+                        this.allData[idx]._invoiceFile = null;
+                        await this.fetchData();
+                    } else {
+                        throw new Error(result.message || 'Upload gagal');
                     }
-                },
-								
-                copyFormat(i) {
-                    const text = `*FORMAT PEMESANAN* :
+                } catch (err) {
+                    console.error('Upload error:', err);
+                    showToast('Upload gagal: ' + err.message, 'error');
+                } finally {
+                    this.allData[idx]._uploadingInvoice = false;
+                }
+            },
+
+            // ─── Follow Up WhatsApp ───────────────────────────────
+            followUp(item) {
+                if (!item.invoice) { showToast('Invoice belum tersedia!', 'error'); return; }
+                let num = item.whatsapp.trim().replace(/\D/g, '');
+                if (num.startsWith('0'))  num = '62' + num.substring(1);
+                if (!num.startsWith('62')) num = '62' + num;
+                const tglKirim = this.formatDate(item.tglKirim);
+                const msg = `Halo kak ${item.customer}, pesanan tgl ${tglKirim} sudah ready. Mohon pelunasannya ya: ${item.invoice}`;
+                window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+            },
+
+            // ─── Update Status ────────────────────────────────────
+            async updateStatus(row, val) {
+                await fetch(`${this.apiUrl}?action=update&row=${row}&col=8&val=${encodeURIComponent(val)}`);
+                this.fetchData();
+            },
+
+            // ─── Modal ────────────────────────────────────────────
+            openModal(row, col, title, currentValue = '') {
+                this.activeRow   = row;
+                this.activeCol   = col;
+                this.modalTitle  = title;
+                this.modalValue  = currentValue;
+                this.modalOpen   = true;
+            },
+
+            async submitModal() {
+                this.modalOpen = false;
+                this.loading   = true;
+                await fetch(`${this.apiUrl}?action=update&row=${this.activeRow}&col=${this.activeCol}&val=${encodeURIComponent(this.modalValue)}`);
+                this.fetchData();
+            },
+
+            // ─── Delete ───────────────────────────────────────────
+            async deleteData(row, customerName) {
+                if (!confirm(`PERINGATAN!\nApakah Anda yakin ingin menghapus data milik: ${customerName}?\n\nData akan hilang permanen dari Spreadsheet.`)) return;
+                this.loading = true;
+                try {
+                    await fetch(`${this.apiUrl}?action=delete&row=${row}`);
+                    await this.fetchData();
+                    alert(`Data ${customerName} berhasil dihapus.`);
+                } catch (e) {
+                    alert('Terjadi kesalahan saat menghapus data.');
+                }
+            },
+
+            // ─── Helpers ──────────────────────────────────────────
+            copyFormat(i) {
+                const text =
+`*FORMAT PEMESANAN* :
 Nama Customer : ${i.customer}
 No Whatsapp : ${i.whatsapp}
 
@@ -260,38 +455,54 @@ Request Kirim Tanggal : ${this.formatDate(i.tglKirim)}
 
 List Pesanan :
 ${i.listPesanan}`;
-                    navigator.clipboard.writeText(text);
-                    alert('Format Order disalin!');
-                },
+                navigator.clipboard.writeText(text);
+                showToast('Format Order disalin!', 'info');
+            },
 
-                formatDate(dateStr) {
-                    if(!dateStr) return '-';
-                    const d = new Date(dateStr);
-                    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-                },
-								
-								formatRupiah(angka) {
-                    if (!angka || isNaN(angka)) return angka; // Jika bukan angka (misal user mengetik teks), biarkan apa adanya
-                    return new Intl.NumberFormat('id-ID', { 
-                        style: 'currency', 
-                        currency: 'IDR', 
-                        minimumFractionDigits: 0 
-                    }).format(angka);
-                },
-								
-                getStatusColor(status) {
-                    const colors = {
-                        'menunggu': 'bg-gray-200 text-gray-700',
-                        'DRAFT': 'bg-orange-100 text-orange-700',
-                        'Verifying': 'bg-blue-100 text-blue-700',
-                        'Sudah Bayar': 'bg-green-100 text-green-700',
-                        'READY': 'bg-yellow-400 text-black',
-                        'SENT': 'bg-purple-100 text-purple-700'
-                    };
-                    return colors[status] || 'bg-red-100 text-red-700';
-                }
+            formatDate(dateStr) {
+                if (!dateStr) return '-';
+                const d = new Date(dateStr);
+                return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+            },
+
+            formatRupiah(angka) {
+                if (!angka || isNaN(angka)) return angka;
+                return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+            },
+
+            getStatusColor(status) {
+                const colors = {
+                    'menunggu':    'bg-gray-200 text-gray-700',
+                    'DRAFT':       'bg-orange-100 text-orange-700',
+                    'Verifying':   'bg-blue-100 text-blue-700',
+                    'Sudah Bayar': 'bg-green-100 text-green-700',
+                    'READY':       'bg-yellow-400 text-black',
+                    'SENT':        'bg-purple-100 text-purple-700'
+                };
+                return colors[status] || 'bg-red-100 text-red-700';
             }
         }
+    }
+
+    // ─── Utility: File → Base64 ───────────────────────────────
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload  = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // ─── Utility: Toast Notification ─────────────────────────
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast     = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3500);
+    }
     </script>
 </body>
 </html>
